@@ -40,7 +40,7 @@ export default function NicknameModal({ onComplete }) {
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fade-in">
         <h2 className="text-3xl font-bold text-gray-800 mb-4 text-center">
-          👋 欢迎来到 StoryLink
+          👋 欢迎来到 MovieHub
         </h2>
         
         <p className="text-gray-600 mb-6 text-center">

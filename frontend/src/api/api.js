@@ -63,5 +63,17 @@ export const getFullStoryContent = async (id) => {
   return response.data
 }
 
+// Fork 故事到自己的仓库
+export const forkStory = async (id, author) => {
+  const response = await api.post(`/stories/${id}/fork`, { author })
+  return response.data
+}
+
+// 获取故事的原始来源信息
+export const getOriginInfo = async (id) => {
+  const response = await api.get(`/stories/${id}/origin`)
+  return response.data
+}
+
 export default api
 

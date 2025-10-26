@@ -27,7 +27,14 @@ function HomePage() {
   const loadStories = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`/api/stories?filter_by=${filterBy}&limit=50`)
+      const params = new URLSearchParams({ filter_by: filterBy, limit: 50 })
+      
+      // 如果是"我的故事"，传递作者参数
+      if (filterBy === 'my' && userNickname) {
+        params.append('author', userNickname)
+      }
+      
+      const response = await axios.get(`/api/stories?${params}`)
       setStories(response.data)
       setError(null)
     } catch (err) {
@@ -73,23 +80,34 @@ function HomePage() {
           <div className="flex justify-between items-center mb-4 px-4">
             <div className="flex-1"></div>
             <h1 className="text-6xl font-bold text-white flex-1">
-              🎬 StoryLink
+              🎬 MovieHub
             </h1>
-            <div className="flex-1 text-right">
+            <div className="flex-1 flex justify-end">
               {userNickname && (
-                <button
-                  onClick={changeNickname}
-                  className="text-white/80 hover:text-white text-sm underline transition-colors"
-                  title="点击修改昵称"
-                >
-                  👤 {userNickname}
-                </button>
+                <div className="bg-white/20 backdrop-blur-md rounded-full px-5 py-3 border border-white/30 shadow-lg hover:bg-white/30 transition-all group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white text-base font-bold shadow-md">
+                      {userNickname.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                      <div className="text-white font-semibold text-sm leading-tight">
+                        {userNickname}
+                      </div>
+                      <button 
+                        onClick={changeNickname}
+                        className="text-white/70 hover:text-white text-xs underline transition-colors leading-tight"
+                      >
+                        切换
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
           
           <p className="text-xl text-white/80 mb-8">
-            一句话,AI 自动编故事;喜欢的故事,自动生成短片
+            欢迎来到影视创作版 Github，携手共创下一个经典
           </p>
           
           <Link
@@ -105,6 +123,7 @@ function HomePage() {
         <div className="flex gap-4 mb-8 justify-center flex-wrap">
           {[
             { value: 'all', label: '全部故事', icon: '📖' },
+            { value: 'my', label: '我的故事', icon: '📁' },
             { value: 'with_video', label: '有视频', icon: '🎥' }
           ].map(filter => (
             <button
@@ -149,51 +168,88 @@ function HomePage() {
               {stories.map((story) => (
                 <div
                   key={story.id}
-                  className="bg-white/10 backdrop-blur-md rounded-2xl p-6 hover:bg-white/20 transition-all transform hover:scale-105 border border-white/20"
+                  className="bg-white/10 backdrop-blur-md rounded-2xl overflow-hidden border border-white/20 hover:border-white/40 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 group"
                 >
-                  {/* 标签 */}
-                  <div className="flex gap-2 mb-3 flex-wrap">
-                    {story.video_status === 'completed' && (
-                      <span className="px-2 py-1 bg-pink-500/80 text-white text-xs rounded-full">
-                        🎥 有视频
+                  {/* 顶部标签栏 */}
+                  <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-4 py-3 border-b border-white/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* 原创或Fork标签 */}
+                        {story.forked_from ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-500/90 text-white text-xs font-medium rounded-full shadow-lg">
+                            <span>🍴</span>
+                            Fork
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/90 text-white text-xs font-medium rounded-full shadow-lg">
+                            <span>✨</span>
+                            原创
+                          </span>
+                        )}
+                        
+                        {/* 视频状态标签 */}
+                        {story.video_status === 'completed' && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-pink-500/90 text-white text-xs font-medium rounded-full shadow-lg">
+                            <span>🎥</span>
+                            有视频
+                          </span>
+                        )}
+                        
+                        {story.video_status === 'generating' && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/90 text-white text-xs font-medium rounded-full shadow-lg animate-pulse">
+                            <span>⏳</span>
+                            生成中
+                          </span>
+                        )}
+                      </div>
+                      
+                      <span className="text-white/40 text-xs font-mono whitespace-nowrap ml-2">
+                        #{story.id}
                       </span>
-                    )}
-                    
-                    {story.video_status === 'generating' && (
-                      <span className="px-2 py-1 bg-yellow-500/80 text-white text-xs rounded-full animate-pulse">
-                        ⏳ 生成中
-                      </span>
-                    )}
+                    </div>
                   </div>
 
-                  <h3 className="text-xl font-bold text-white mb-2 line-clamp-2">
-                    {story.title}
-                  </h3>
-                  
-                  <p className="text-white/60 text-sm mb-2">
-                    👤 {story.author} · 📝 {story.fork_count}/{story.max_contributors} 人续写
-                  </p>
-
-                  <p className="text-white/80 text-sm mb-4 line-clamp-3">
-                    {story.content}
-                  </p>
-
-                  <div className="flex gap-2">
-                    <Link
-                      to={`/story/${story.id}`}
-                      className="flex-1 text-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium"
-                    >
-                      查看详情
-                    </Link>
+                  {/* 内容区域 */}
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-white mb-3 line-clamp-2 group-hover:text-purple-300 transition-colors min-h-[3.5rem] flex items-center">
+                      {story.title}
+                    </h3>
                     
-                    {story.video_status === 'completed' && story.video_url && (
+                    <div className="flex items-center justify-between text-white/70 text-sm mb-4 py-3 px-3 bg-white/5 rounded-lg border border-white/10">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">👤</span>
+                        <span className="font-semibold text-white/90">{story.author}</span>
+                      </div>
+                      <div className="w-px h-5 bg-white/20"></div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">📝</span>
+                        <span className="font-medium text-white/90">{story.fork_count}/{story.max_contributors} 续写</span>
+                      </div>
+                    </div>
+
+                    <p className="text-white/70 text-sm leading-relaxed mb-6 line-clamp-3 min-h-[4.5rem]">
+                      {story.content}
+                    </p>
+
+                    <div className="flex gap-2">
                       <Link
                         to={`/story/${story.id}`}
-                        className="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium"
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:shadow-purple-500/50 transform hover:scale-105"
                       >
-                        ▶️
+                        查看详情
+                        <span className="group-hover:translate-x-1 transition-transform">→</span>
                       </Link>
-                    )}
+                      
+                      {story.video_status === 'completed' && story.video_url && (
+                        <Link
+                          to={`/story/${story.id}`}
+                          className="px-4 py-2.5 bg-pink-500/80 text-white rounded-xl hover:bg-pink-600 transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:shadow-pink-500/50 transform hover:scale-105 flex items-center justify-center"
+                          title="观看视频"
+                        >
+                          ▶️
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -203,7 +259,7 @@ function HomePage() {
 
         {/* 页脚 */}
         <footer className="text-center mt-16 text-white/60">
-          <p>Made with ❤️ by StoryLink Team</p>
+          <p>Made with ❤️ by MovieHub Team</p>
         </footer>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getStory, getFullStoryContent, polishText, generateVideo, regenerateVideo, checkCanFork } from '../api/api'
+import { getStory, getFullStoryContent, polishText, generateVideo, regenerateVideo, checkCanFork, forkStory, getOriginInfo } from '../api/api'
 
 function StoryDetailPage() {
   const { id } = useParams()
@@ -15,6 +15,8 @@ function StoryDetailPage() {
   const [generating, setGenerating] = useState(false)
   const [userNickname, setUserNickname] = useState('')
   const [canFork, setCanFork] = useState(true)
+  const [originInfo, setOriginInfo] = useState(null)
+  const [forking, setForking] = useState(false)
 
   useEffect(() => {
     // 获取用户昵称
@@ -25,6 +27,7 @@ function StoryDetailPage() {
   useEffect(() => {
     loadStory()
     checkForkPermission()
+    loadOriginInfo()
     // 每 5 秒刷新一次(用于更新视频生成状态)
     const interval = setInterval(loadStory, 5000)
     return () => clearInterval(interval)
@@ -57,6 +60,44 @@ function StoryDetailPage() {
       setCanFork(data.can_fork)
     } catch (err) {
       console.error('检查续写权限失败:', err)
+    }
+  }
+
+  const loadOriginInfo = async () => {
+    try {
+      const info = await getOriginInfo(id)
+      setOriginInfo(info)
+    } catch (err) {
+      console.error('获取原始信息失败:', err)
+    }
+  }
+
+  const handleForkStory = async () => {
+    if (!userNickname) {
+      alert('请先设置昵称')
+      navigate('/')
+      return
+    }
+
+    if (fullStory.original_author === userNickname) {
+      alert('不能Fork自己的故事')
+      return
+    }
+
+    if (!confirm(`确认要Fork《${fullStory.title}》到你的仓库吗？\n\nFork后你将拥有独立的副本，可以自由续写和生成视频。`)) {
+      return
+    }
+
+    try {
+      setForking(true)
+      const newStory = await forkStory(id, userNickname)
+      alert(`Fork成功！\n\n现在你可以在"我的故事"中找到它，也可以对它进行续写和生成视频。`)
+      navigate(`/story/${newStory.id}`)
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Fork失败，请稍后重试')
+      console.error(err)
+    } finally {
+      setForking(false)
     }
   }
 
@@ -194,6 +235,21 @@ function StoryDetailPage() {
 
         {/* 故事详情 */}
         <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20">
+          {/* 显示 Fork 来源 */}
+          {originInfo?.is_forked && originInfo.origin && (
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6">
+              <p className="text-purple-300 text-sm">
+                🍴 Forked from{' '}
+                <Link 
+                  to={`/story/${originInfo.origin.id}`}
+                  className="underline hover:text-purple-200 font-medium"
+                >
+                  {originInfo.origin.author} 的《{originInfo.origin.title}》
+                </Link>
+              </p>
+            </div>
+          )}
+
           <h1 className="text-4xl font-bold text-white mb-4">
             {fullStory.title}
           </h1>
@@ -307,8 +363,18 @@ function StoryDetailPage() {
               disabled={!canFork}
               className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              🍴 Fork 并续写 {!canFork && '(已满)'}
+              ✍️ 续写这个故事 {!canFork && '(已满)'}
             </button>
+
+            {fullStory.original_author !== userNickname && (
+              <button
+                onClick={handleForkStory}
+                disabled={forking}
+                className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {forking ? '⏳ Fork中...' : '🍴 Fork 到我的仓库'}
+              </button>
+            )}
 
             {fullStory.original_author === userNickname && story.video_status === 'none' && (
               <button

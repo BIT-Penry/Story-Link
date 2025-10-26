@@ -1,5 +1,5 @@
 """
-StoryLink 后端 API
+MovieHub 后端 API
 MVP 版本 - 支持故事创作、Fork、AI 润色和视频生成
 """
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -15,7 +15,7 @@ from pathlib import Path
 # AI 模块
 from ai_service import polish_text, generate_video
 
-app = FastAPI(title="StoryLink API", version="1.0.0")
+app = FastAPI(title="MovieHub API", version="1.0.0")
 
 # CORS 配置(必须在挂载静态文件之前)
 app.add_middleware(
@@ -34,7 +34,7 @@ VIDEO_DIR.mkdir(exist_ok=True)
 app.mount("/videos", StaticFiles(directory="videos"), name="videos")
 
 # 数据库配置
-DB_PATH = "storylink.db"
+DB_PATH = "moviehub.db"
 
 # ========== 数据库初始化 ==========
 def init_db():
@@ -84,6 +84,9 @@ def migrate_db():
         if "is_original" not in columns:
             cursor.execute("ALTER TABLE stories ADD COLUMN is_original BOOLEAN DEFAULT TRUE")
             print("✅ 添加字段: is_original")
+        if "forked_from" not in columns:
+            cursor.execute("ALTER TABLE stories ADD COLUMN forked_from INTEGER DEFAULT NULL")
+            print("✅ 添加字段: forked_from")
         
         # 更新现有数据的 video_status
         cursor.execute("UPDATE stories SET video_status = 'none' WHERE video_status = 'pending'")
@@ -120,12 +123,16 @@ class StoryResponse(BaseModel):
     max_contributors: int
     fork_count: int
     is_original: bool
+    forked_from: Optional[int]
     created_at: str
 
 class PolishRequest(BaseModel):
     content: str
 
 class GenerateVideoRequest(BaseModel):
+    author: str
+
+class ForkRequest(BaseModel):
     author: str
 
 # ========== 数据库操作函数 ==========
@@ -220,6 +227,7 @@ def create_story(story: StoryCreate):
 @app.get("/api/stories", response_model=List[StoryResponse])
 def get_stories(
     filter_by: str = "all",
+    author: Optional[str] = None,
     sort_by: str = "created_at",
     limit: int = 50
 ):
@@ -227,7 +235,8 @@ def get_stories(
     获取故事列表（只返回原创故事，续写内容不单独显示）
     
     filter_by:
-        - all: 所有原创故事
+        - all: 所有原创故事（只显示真正的原创，不包括Fork的）
+        - my: 我的故事（我创建的原创 + 我Fork的）
         - with_video: 有视频的原创故事
     """
     try:
@@ -237,7 +246,13 @@ def get_stories(
         # 只查询原创故事（parent_id 为 NULL）
         where_clause = "WHERE parent_id IS NULL"
         
-        if filter_by == "with_video":
+        if filter_by == "my" and author:
+            # 我的故事：我创建的原创 + 我Fork的
+            where_clause += f" AND author = '{author}'"
+        elif filter_by == "all":
+            # 全部故事：只显示真正的原创（不包括Fork的）
+            where_clause += " AND forked_from IS NULL"
+        elif filter_by == "with_video":
             where_clause += " AND video_status = 'completed'"
         
         # 验证排序字段
@@ -462,6 +477,131 @@ def get_full_story_content(story_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取完整内容失败: {str(e)}")
+
+@app.post("/api/stories/{story_id}/fork", response_model=StoryResponse)
+def fork_story(story_id: int, fork_request: ForkRequest):
+    """
+    Fork 一个故事到自己的仓库
+    
+    Args:
+        story_id: 要 Fork 的故事 ID
+        fork_request: {author: "当前用户昵称"}
+    
+    Returns:
+        新创建的故事信息
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 1. 获取原故事（只能 fork 原创故事，不能 fork 续写）
+        cursor.execute(
+            "SELECT * FROM stories WHERE id = ? AND parent_id IS NULL",
+            (story_id,)
+        )
+        original = cursor.fetchone()
+        
+        if not original:
+            conn.close()
+            raise HTTPException(status_code=404, detail="故事不存在或无法Fork（只能Fork原创故事）")
+        
+        # 2. 检查是否自己 fork 自己的故事
+        if original["author"] == fork_request.author:
+            conn.close()
+            raise HTTPException(status_code=400, detail="不能Fork自己的故事")
+        
+        # 3. 检查是否已经 fork 过
+        cursor.execute(
+            """
+            SELECT id FROM stories 
+            WHERE forked_from = ? AND author = ? AND parent_id IS NULL
+            """,
+            (story_id, fork_request.author)
+        )
+        existing_fork = cursor.fetchone()
+        
+        if existing_fork:
+            conn.close()
+            raise HTTPException(status_code=400, detail="你已经Fork过这个故事了")
+        
+        # 4. 创建 Fork（复制原故事内容，但作者改为当前用户）
+        cursor.execute(
+            """
+            INSERT INTO stories 
+            (title, author, content, forked_from, max_contributors, video_status, parent_id, fork_count, is_original)
+            VALUES (?, ?, ?, ?, ?, 'none', NULL, 0, TRUE)
+            """,
+            (
+                original["title"],
+                fork_request.author,
+                original["content"],
+                story_id,
+                5  # 默认允许5人续写
+            )
+        )
+        
+        new_story_id = cursor.lastrowid
+        
+        # 5. 获取新创建的故事
+        cursor.execute("SELECT * FROM stories WHERE id = ?", (new_story_id,))
+        new_story = cursor.fetchone()
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"🍴 故事已Fork: {fork_request.author} fork了 {original['author']} 的《{original['title']}》")
+        
+        return dict_from_row(new_story)
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fork失败: {str(e)}")
+
+@app.get("/api/stories/{story_id}/origin")
+def get_origin_story(story_id: int):
+    """
+    获取故事的原始来源信息
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM stories WHERE id = ?", (story_id,))
+        story = cursor.fetchone()
+        
+        if not story:
+            conn.close()
+            raise HTTPException(status_code=404, detail="故事不存在")
+        
+        # 如果是 Fork 的故事，获取原始故事信息
+        origin_info = None
+        if story["forked_from"]:
+            cursor.execute(
+                "SELECT id, title, author, created_at FROM stories WHERE id = ?",
+                (story["forked_from"],)
+            )
+            origin = cursor.fetchone()
+            if origin:
+                origin_info = {
+                    "id": origin["id"],
+                    "title": origin["title"],
+                    "author": origin["author"],
+                    "created_at": origin["created_at"]
+                }
+        
+        conn.close()
+        
+        return {
+            "story_id": story_id,
+            "is_forked": story["forked_from"] is not None,
+            "origin": origin_info
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取原始信息失败: {str(e)}")
 
 def generate_video_task(story_id: int, content: str):
     """后台任务:生成视频"""
