@@ -105,7 +105,28 @@ def generate_video(content: str, story_id: int) -> str:
             retry_count += 1
         
         if not operation.done:
+            print(f"❌ 视频生成超时（等待了 {retry_count * 10} 秒）")
             raise TimeoutError("视频生成超时")
+        
+        print(f"✅ 操作完成，正在检查结果...")
+        
+        # 检查是否有错误
+        if hasattr(operation, 'error') and operation.error:
+            error_msg = f"API 返回错误: {operation.error}"
+            print(f"❌ {error_msg}")
+            raise RuntimeError(error_msg)
+        
+        # 检查响应是否存在
+        if not operation.response:
+            print(f"❌ API 返回空响应")
+            print(f"📊 Operation 状态: done={operation.done}")
+            raise RuntimeError("API 返回空响应，可能需要配置 API 密钥或检查配额")
+        
+        # 检查是否有生成的视频
+        if not hasattr(operation.response, 'generated_videos') or not operation.response.generated_videos:
+            print(f"❌ API 未返回生成的视频")
+            print(f"📊 Response 内容: {operation.response}")
+            raise RuntimeError("API 未返回生成的视频")
         
         # 4. 下载生成的视频
         generated_video = operation.response.generated_videos[0]

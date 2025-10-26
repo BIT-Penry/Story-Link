@@ -15,11 +15,18 @@ function EditPage() {
     content: '',
   })
   
+  const [maxContributors, setMaxContributors] = useState(5)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [parentStory, setParentStory] = useState(null)
 
   useEffect(() => {
+    // 自动填充昵称
+    const nickname = localStorage.getItem('user_nickname')
+    if (nickname) {
+      setFormData(prev => ({ ...prev, author: nickname }))
+    }
+    
     if (parentId) {
       loadParentStory()
     }
@@ -65,7 +72,8 @@ function EditPage() {
       
       const storyData = {
         ...formData,
-        parent_id: parentId ? parseInt(parentId) : null
+        parent_id: parentId ? parseInt(parentId) : null,
+        max_contributors: maxContributors
       }
       
       const newStory = await createStory(storyData)
@@ -151,6 +159,29 @@ function EditPage() {
                 required
               />
             </div>
+
+            {/* 续写人数设置（仅原创故事） */}
+            {!parentId && (
+              <div>
+                <label className="block text-white font-medium mb-2">
+                  🔀 允许多少人续写？
+                </label>
+                <select
+                  value={maxContributors}
+                  onChange={(e) => setMaxContributors(Number(e.target.value))}
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20"
+                >
+                  {[1, 2, 3, 4, 5].map(num => (
+                    <option key={num} value={num} className="bg-gray-800">
+                      {num} 人
+                    </option>
+                  ))}
+                </select>
+                <p className="text-white/50 text-sm mt-2">
+                  设置允许多少人可以续写您的故事（最多5人）
+                </p>
+              </div>
+            )}
 
             {/* 正文 */}
             <div>

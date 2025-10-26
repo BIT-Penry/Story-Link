@@ -39,15 +39,27 @@ export const polishText = async (content) => {
   return response.data.polished_content
 }
 
-// 批准故事(触发视频生成)
-export const approveStory = async (id) => {
-  const response = await api.post(`/stories/${id}/approve`)
+// 生成视频（仅作者可用）
+export const generateVideo = async (id, author) => {
+  const response = await api.post(`/stories/${id}/generate-video`, { author })
   return response.data
 }
 
 // 重新生成视频
-export const regenerateVideo = async (id) => {
-  const response = await api.post(`/stories/${id}/regenerate`)
+export const regenerateVideo = async (id, author) => {
+  const response = await api.post(`/stories/${id}/generate-video`, { author })
+  return response.data
+}
+
+// 检查是否可以续写
+export const checkCanFork = async (id) => {
+  const response = await api.get(`/stories/${id}/can-fork`)
+  return response.data
+}
+
+// 获取故事完整内容（包含所有续写）
+export const getFullStoryContent = async (id) => {
+  const response = await api.get(`/stories/${id}/full-content`)
   return response.data
 }
 

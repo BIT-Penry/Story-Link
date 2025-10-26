@@ -15,7 +15,7 @@ fi
 # 启动后端
 echo "🚀 启动后端服务器 (端口 8000)..."
 cd backend
-python main.py &
+python3 main.py &
 BACKEND_PID=$!
 cd ..
 
