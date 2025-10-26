@@ -530,6 +530,40 @@ def regenerate_video(story_id: int, background_tasks: BackgroundTasks):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"重新生成视频失败: {str(e)}")
 
+@app.post("/api/stories/{story_id}/publish")
+def publish_story(story_id: int):
+    """直接发布故事(不生成视频)"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 检查故事是否存在
+        cursor.execute("SELECT * FROM stories WHERE id = ?", (story_id,))
+        story = cursor.fetchone()
+        
+        if not story:
+            conn.close()
+            raise HTTPException(status_code=404, detail="故事不存在")
+        
+        # 标记为已批准
+        cursor.execute(
+            "UPDATE stories SET is_approved = 1 WHERE id = ?",
+            (story_id,)
+        )
+        conn.commit()
+        conn.close()
+        
+        return {
+            "message": "故事已发布!",
+            "story_id": story_id,
+            "is_approved": True
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"发布故事失败: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
