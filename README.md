@@ -1,122 +1,288 @@
-# StoryLink MVP 开发规范文档
+# 🎬 StoryLink - 故事接力创作平台
 
-## 🌿 分支策略（Feature Branch + PR）
+> **一句话,AI 自动编故事;喜欢的故事,自动生成短片。**
 
-采用 **极简 Feature Branch 工作流**（小型团队最清晰、最安全的协作方式）：
+StoryLink 是一个支持故事接力创作与 AI 增强的轻量级平台。用户可以创作故事、Fork 他人的故事续写、使用 AI 润色文本,并将喜欢的故事自动生成为短视频。
 
-### 1. main 分支规则
+## ✨ 核心功能
 
-* 仅包含 **可演示、无崩溃** 的代码
-* 禁止直接 push 代码
-* 所有合并必须通过 Pull Request（PR）完成
+- 📝 **发布原始故事** - 填写标题、昵称、正文,创建新故事
+- 🍴 **Fork 并续写** - 在他人故事基础上创建新版本
+- 🤖 **AI 文本润色** - 使用 GPT-4o-mini 优化故事表达
+- 🎥 **自动生成视频** - 使用 Google Veo 将故事转换为短片
+- 📺 **首页展示** - 浏览所有已发布的故事和视频
 
-### 2. 功能分支命名规范
+## 🏗️ 技术栈
 
-从 main 分支拉出个人功能分支，命名格式：
+### 后端
+- **FastAPI** - 高性能 Python Web 框架
+- **SQLite** - 轻量级数据库
+- **OpenAI GPT-4o-mini** - 文本润色
+- **Google Veo 3.1** - 视频生成
 
-`feat/<模块>-<姓名缩写>`
+### 前端
+- **React** - UI 框架
+- **Vite** - 构建工具
+- **Tailwind CSS** - 样式框架
+- **React Router** - 路由管理
 
-**示例**：
-
-* `feat/backend-api-ly`（后端接口 - 李阳）
-* `feat/frontend-ui-wz`（前端界面 - 王泽）
-* `feat/ai-proxy-xy`（AI 代理 - 小雪）
-* `feat/demo-deploy-zh`（演示部署 - 张海）
-
-### 3. 合并流程
-
-a. 功能开发完成 → push 到远程功能分支
-b. 创建 PR → 标题注明状态（`[WIP]` 开发中 / `[Ready]` 可合并）
-c. 至少 1 人快速 review（重点：能否跑通？是否破坏现有功能？）
-d. 审核通过后，通过 **squash merge** 合并到 main 分支
-
-> 💡 节省时间技巧：review 可口头确认，但 PR 必须创建（确保代码可追溯）
-
-
-
-***
-
-## 📂 项目结构
+## 📦 项目结构
 
 ```
-storylink-mvp/
-├── backend/          # FastAPI 服务（后端代码）
-├── frontend/         # React + Vite 应用（前端代码）
-├── docs/             # 演示脚本、接口说明（可选）
-├── .gitignore        # 忽略 node_modules、.env、__pycache__ 等
-├── README.md         # 启动指南（必读！）
-└── LICENSE           # 可选，建议 MIT 协议
+StoryLink/
+├── backend/              # 后端代码
+│   ├── main.py          # FastAPI 主应用
+│   ├── ai_service.py    # AI 服务模块
+│   ├── requirements.txt # Python 依赖
+│   └── videos/          # 生成的视频文件
+│
+├── frontend/            # 前端代码
+│   ├── src/
+│   │   ├── pages/       # 页面组件
+│   │   │   ├── HomePage.jsx        # 首页
+│   │   │   ├── StoryDetailPage.jsx # 故事详情页
+│   │   │   └── EditPage.jsx        # 编辑页
+│   │   ├── api/         # API 调用
+│   │   ├── App.jsx      # 主应用
+│   │   └── main.jsx     # 入口文件
+│   ├── package.json     # Node 依赖
+│   └── vite.config.js   # Vite 配置
+│
+├── .env.example         # 环境变量示例
+├── .gitignore
+└── README.md
 ```
 
+## 🚀 快速开始
 
+### 1. 环境准备
 
-***
+确保已安装:
+- Python 3.9+
+- Node.js 18+
+- pip 和 npm
 
-## 🧾 提交（Commit）规范
+### 2. 克隆项目
 
-使用 **语义化前缀** 提交，便于快速追踪变更：
-
-| 前缀      | 说明             |
-| ------- | -------------- |
-| `feat`  | 新功能开发          |
-| `fix`   | 修复 bug         |
-| `docs`  | 文档更新（含注释）      |
-| `chore` | 构建 / 依赖 / 配置调整 |
-
-**示例**：
-
-```
-git commit -m "feat: add /stories POST endpoint"  # 新增故事提交接口
-git commit -m "fix: handle empty nickname in form" # 修复表单空昵称问题
-git commit -m "docs: update API docs in README"    # 更新 README 中的接口文档
-git commit -m "chore: add vite config proxy"       # 配置 Vite 代理
+```bash
+cd "/Applications/宋晗搏/黑客松/电影GitHub"
 ```
 
+### 3. 配置环境变量
 
+复制 `.env.example` 为 `.env` 并填写 API Key:
 
-***
-
-## 🔐 敏感信息管理
-
-1. 所有 API Key（如 OpenAI、T2V）必须通过 `.env` 文件加载
-2. `.env` 文件 **必须加入 .gitignore**（禁止提交到仓库）
-3. 在 `README.md` 中提供 `.env.example` 模板（示例如下）：
-
-```
-# .env.example（复制到 .env 后替换实际密钥）
-OPENAI_API_KEY=sk-xxxx
-T2V_API_KEY=tv-xxxx
+```bash
+cp .env.example .env
 ```
 
+编辑 `.env`:
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+GOOGLE_API_KEY=your_google_api_key_here
+```
 
+### 4. 启动后端
 
-***
+```bash
+# 进入后端目录
+cd backend
 
-## 🔄 集成与测试
+# 安装依赖
+pip install -r requirements.txt
 
-核心原则：**早集成、早测试、少踩坑**
+# 启动后端服务器 (端口 8000)
+python main.py
+```
 
-1. 每完成一个接口 / 页面，立即尝试联调
-2. 后端：优先用 `curl` 或 `httpie` 验证接口可用性
-3. 前端：无法联调时可用临时 mock 数据（必须标注 `// MOCK` 注释）
-4. 每日集成检查点（至少 2 次）：
-   * 时间：建议 12:00 和 16:00
-   * 操作：
-     1. 拉取最新 main 分支
-     2. 合并自己的功能分支
-     3. 验证本地能完整跑通核心流程
+后端将在 `http://localhost:8000` 运行
 
+### 5. 启动前端
 
+在新终端中:
 
-***
+```bash
+# 进入前端目录
+cd frontend
 
-## 🚀 演示准备规范
+# 安装依赖
+npm install
 
-确保演示环节零故障，需完成以下准备：
+# 启动开发服务器 (端口 3000)
+npm run dev
+```
 
-1. 一键启动要求：所有成员需在自己机器上 **一键启动全栈服务**（`README.md` 必须写清启动命令）
-2. 公网链接生成：使用 `ngrok` 暴露服务
-   * 前端：`ngrok http 5173`
-   * 后端代理：`ngrok http 8000`
-3. 备用方案：准备 **演示视频**（防止现场网络 / 服务异常）
-4. 脚本统一：演示脚本放在 `docs/demo-script.md`（所有人遵循统一脚本）
+前端将在 `http://localhost:3000` 运行
+
+### 6. 访问应用
+
+打开浏览器访问: **http://localhost:3000**
+
+## 📖 使用指南
+
+### 创作新故事
+
+1. 点击首页的"✨ 写新故事"按钮
+2. 填写昵称、标题、故事内容
+3. 点击"🚀 提交故事"
+
+### Fork 并续写
+
+1. 进入任意故事详情页
+2. 点击"🍴 Fork 并续写"按钮
+3. 编辑新版本并提交
+
+### AI 润色
+
+1. 在故事详情页点击"🤖 AI 润色"
+2. 系统会使用 GPT-4o-mini 优化文本
+3. 可以基于润色后的版本继续 Fork
+
+### 发布为视频
+
+1. 在故事详情页点击"🚀 发布为视频"
+2. 系统会调用 Google Veo 生成视频(需要几分钟)
+3. 生成完成后可以在线观看或重新生成
+
+## 🔌 API 接口
+
+### 后端 API (端口 8000)
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/stories` | 获取故事列表 |
+| GET | `/api/stories/{id}` | 获取故事详情 |
+| POST | `/api/stories` | 创建新故事 |
+| POST | `/api/polish` | AI 文本润色 |
+| POST | `/api/stories/{id}/approve` | 批准故事并生成视频 |
+| POST | `/api/stories/{id}/regenerate` | 重新生成视频 |
+
+### 数据库表结构
+
+```sql
+CREATE TABLE stories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL,
+    content TEXT NOT NULL,
+    parent_id INTEGER,
+    is_approved BOOLEAN DEFAULT FALSE,
+    video_url TEXT,
+    video_status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parent_id) REFERENCES stories(id)
+);
+```
+
+## 🎯 MVP 范围
+
+### ✅ 已实现功能
+
+- [x] 发布原始故事
+- [x] Fork 故事并续写
+- [x] AI 文本润色 (GPT-4o-mini)
+- [x] 发布为视频按钮
+- [x] 首页展示已批准故事
+- [x] 视频生成 (Google Veo)
+- [x] 视频状态轮询
+- [x] 重新生成视频
+
+### 🚧 预留功能 (未实现)
+
+- [ ] 用户登录/注册系统
+- [ ] 评论/点赞/分享
+- [ ] 多版本对比/合并
+- [ ] 语音配音
+- [ ] PR (Pull Request) 功能
+
+## 🧪 开发测试
+
+### 后端测试
+
+```bash
+# 查看 API 文档
+open http://localhost:8000/docs
+```
+
+### 前端测试
+
+```bash
+# 构建生产版本
+cd frontend
+npm run build
+
+# 预览构建结果
+npm run preview
+```
+
+## 🐛 故障排除
+
+### 问题 1: 后端无法启动
+
+**解决方案**:
+```bash
+# 检查 Python 版本
+python --version  # 应为 3.9+
+
+# 重新安装依赖
+pip install --upgrade -r backend/requirements.txt
+```
+
+### 问题 2: 视频生成失败
+
+**可能原因**:
+- Google API Key 未配置或无效
+- API 配额不足
+- 网络连接问题
+
+**解决方案**:
+- 检查 `.env` 文件中的 `GOOGLE_API_KEY`
+- 查看后端日志获取详细错误信息
+
+### 问题 3: 前端页面空白
+
+**解决方案**:
+```bash
+# 清除缓存
+rm -rf frontend/node_modules
+rm -rf frontend/dist
+
+# 重新安装
+cd frontend
+npm install
+npm run dev
+```
+
+## 📝 待办事项
+
+- [ ] 添加用户认证系统
+- [ ] 实现评论和点赞功能
+- [ ] 支持多版本故事对比
+- [ ] 优化视频生成速度
+- [ ] 添加故事分类和标签
+- [ ] 实现搜索功能
+- [ ] 支持故事导出 (PDF/Markdown)
+
+## 👥 团队分工建议
+
+| 角色 | 任务 |
+|------|------|
+| **后端开发** | SQLite 表设计 + FastAPI 接口 + AI 代理 |
+| **前端开发** | React 页面 + API 调用 + Tailwind 样式 |
+| **AI 集成** | OpenAI/Google Veo 调用 + Prompt 工程 |
+| **联调 & 演示** | 环境配置 + 代码整合 + 演示脚本 |
+
+## 📄 许可证
+
+MIT License
+
+## 🙏 致谢
+
+- OpenAI 提供的 GPT-4o-mini API
+- Google 提供的 Veo 3.1 视频生成 API
+- React、FastAPI、Tailwind CSS 等开源社区
+
+---
+
+**Made with ❤️ by StoryLink Team**
+
