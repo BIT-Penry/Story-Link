@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getStory, polishText, approveStory, regenerateVideo } from '../api/api'
+import { getStory, polishText, approveStory, regenerateVideo, publishStory } from '../api/api'
 
 function StoryDetailPage() {
   const { id } = useParams()
@@ -12,6 +12,7 @@ function StoryDetailPage() {
   const [polishing, setPolishing] = useState(false)
   const [polishedContent, setPolishedContent] = useState(null)
   const [approving, setApproving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   useEffect(() => {
     loadStory()
@@ -62,6 +63,24 @@ function StoryDetailPage() {
       console.error(err)
     } finally {
       setApproving(false)
+    }
+  }
+
+  const handlePublish = async () => {
+    if (!confirm('确认直接发布故事吗?发布后将在首页展示。')) {
+      return
+    }
+
+    try {
+      setPublishing(true)
+      await publishStory(id)
+      alert('故事已发布!')
+      await loadStory()
+    } catch (err) {
+      alert('发布失败,请稍后重试')
+      console.error(err)
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -216,13 +235,23 @@ function StoryDetailPage() {
             </button>
 
             {!story.is_approved && (
-              <button
-                onClick={handleApprove}
-                disabled={approving}
-                className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {approving ? '⏳ 处理中...' : '🚀 发布为视频'}
-              </button>
+              <>
+                <button
+                  onClick={handlePublish}
+                  disabled={publishing}
+                  className="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  {publishing ? '⏳ 发布中...' : '📢 直接发布'}
+                </button>
+
+                <button
+                  onClick={handleApprove}
+                  disabled={approving}
+                  className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  {approving ? '⏳ 处理中...' : '🚀 发布为视频'}
+                </button>
+              </>
             )}
           </div>
         </div>

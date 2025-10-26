@@ -51,5 +51,11 @@ export const regenerateVideo = async (id) => {
   return response.data
 }
 
+// 直接发布故事(不生成视频)
+export const publishStory = async (id) => {
+  const response = await api.post(`/stories/${id}/publish`)
+  return response.data
+}
+
 export default api
 
